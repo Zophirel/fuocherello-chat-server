@@ -1,0 +1,8 @@
+Models/UserKeys.cs
+Data/ApiServerContext.cs.bak
+
+appsettings.json.bak
+appsettings.Development.json.bak
+*.pfx
+*.sh
+key
