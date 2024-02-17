@@ -6,3 +6,4 @@ appsettings.Development.json.bak
 *.pfx
 *.sh
 key
+obj
