@@ -18,6 +18,7 @@ This is a SignalR chat server that allows real-time communication between Fuoche
     ├── /wwwroot 
     ├── appsetting.json                 (𝗣𝗿𝗲𝘀𝗲𝗻𝘁 𝗯𝘂𝘁 𝗶𝗻𝗰𝗼𝗺𝗽𝗹𝗲𝘁𝗲)
     ├── appsetting.Development.json     (𝗣𝗿𝗲𝘀𝗲𝗻𝘁 𝗯𝘂𝘁 𝗶𝗻𝗰𝗼𝗺𝗽𝗹𝗲𝘁𝗲)
+    ├── key                             (𝗺𝗶𝘀𝘀𝗶𝗻𝗴)
     └── SslCertificate.pfx              (𝗺𝗶𝘀𝘀𝗶𝗻𝗴)
  
   ### 1. <a href="https://github.com/Zophirel/fuocherello-chat-server/blob/main/appsettings.json"> appsetting.json </a> / <a href="https://github.com/Zophirel/fuocherello-chat-server/blob/main/appsettings.Development.json"> appsettings.Development.json </a>
