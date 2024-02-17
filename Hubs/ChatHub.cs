@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using SignalRChatServer.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using SignalRChatServer.Singleton.JwtManager;
 namespace SignalRChatServer.Hubs
 {
     public class ChatHub : Hub
@@ -12,8 +13,10 @@ namespace SignalRChatServer.Hubs
         private readonly ChatDbContext _context;
         private static readonly Dictionary<string, string> _pingMessageIds = new();
         private static readonly IConfigurationRoot _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        public ChatHub(ChatDbContext context){
+        private readonly IJwtManager _manager;
+        public ChatHub(ChatDbContext context, IJwtManager manager){
             _context = context;
+            _manager = manager;
 
         }
         public string GetConnectionId() => Context.ConnectionId;
@@ -27,9 +30,9 @@ namespace SignalRChatServer.Hubs
             return Task.CompletedTask; 
         }
 
-        public async  Task<bool> PingSuccess(string token, string code){
+        public bool PingSuccess(string token, string code){
             Console.WriteLine("Ping Success");
-            if(await IsUserTokenValid(token)){
+            if( _manager.ValidateAccessToken(token) == TokenStatus.Valid){
                 if(_pingMessageIds.Remove(code)){
                    return true;
                 } 
@@ -175,7 +178,7 @@ namespace SignalRChatServer.Hubs
             await _context.SaveChangesAsync();
         }
 
-        private string PrepareMessage(string senderId, string receiverId, string jsonMessage)
+        private string PrepareMessage(string senderId, string jsonMessage)
         {
             string? sender_name = _context.Users.SingleOrDefault(user => user.HashedId == senderId)!.Name;
             string senderNameJson = "\"sender_name\" : " + '"' + sender_name + '"';
@@ -184,9 +187,20 @@ namespace SignalRChatServer.Hubs
         }
 
         public async Task SendMessage(string jsonMessage, string token) {
-            if(await IsUserTokenValid(token)){
-                await PrivateSendMessage(jsonMessage);
-            }
+            switch (_manager.ValidateAccessToken(token)){
+                case TokenStatus.Valid :
+                    await PrivateSendMessage(jsonMessage);
+                    break; 
+                case TokenStatus.Expired :
+                    //notify Client
+                    Console.WriteLine("Expired");
+                    break;
+                case TokenStatus.Invalid :
+                    Console.WriteLine("Invalid");                    
+                    break;
+            } 
+            
+ 
         }
 
         private async Task PrivateSendMessage(string jsonMessage)
@@ -232,7 +246,7 @@ namespace SignalRChatServer.Hubs
                     ChatList chat = new ((Guid) prod.Id!, message.SenderId!, prod.Author!);
                     message.ChatId = chat.Id;
                     //json message that has to be sent to the client
-                    string appNotificationData = PrepareMessage(senderId!, receiverId!, message.toAppMessage(prod.Author!));
+                    string appNotificationData = PrepareMessage(senderId!, message.toAppMessage(prod.Author!));
 
                     //check if receiver client is online or offline 
                     string pingCode = await Ping(receiverId!);
@@ -261,7 +275,7 @@ namespace SignalRChatServer.Hubs
                         //pinged online
                         UserConnection? receiver = _context.ChatServerConnection.SingleOrDefault(user => user.UserId == receiverId);
                         if(receiver is not null){
-                            string appNotificationData = PrepareMessage(senderId!, receiverId!, message.toAppMessage(receiver.UserId!));
+                            string appNotificationData = PrepareMessage(senderId!, message.toAppMessage(receiver.UserId!));
                             Console.WriteLine(appNotificationData);
                             await SendMessageToOnlineUser(appNotificationData, message, receiver!.ConnectionId!);
                             Console.WriteLine("Message mandato");
@@ -273,24 +287,10 @@ namespace SignalRChatServer.Hubs
             }
         }
         
-        private async Task<bool> IsUserTokenValid(string token){
-            HttpClient client = new();
-            client.DefaultRequestHeaders.Add("Authentication", token);
-            var response = await client.GetAsync("https://www.zophirel.it:8443/api/jwt");
-            client.Dispose();
-            Console.WriteLine(response.StatusCode);
-            if(response.StatusCode == System.Net.HttpStatusCode.OK){
-                return true;
-            }else{
-                await OnDisconnet();
-                Context.Abort();
-                return false;
-            }
-        }
 
         public async Task OnConnect(string token){
             Console.WriteLine("ON CONNECT");
-            if(await IsUserTokenValid(token)){
+            if(_manager.ValidateAccessToken(token) == TokenStatus.Valid){
                 var jwtHandler = new JwtSecurityTokenHandler();
                 var jwt = jwtHandler.ReadJwtToken(token);
                 JObject payload = JObject.Parse(jwt.Payload.SerializeToJson());
