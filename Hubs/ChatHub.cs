@@ -17,8 +17,8 @@ namespace SignalRChatServer.Hubs
         public ChatHub(ChatDbContext context, IJwtManager manager){
             _context = context;
             _manager = manager;
-
-        }
+            
+        }        
         public string GetConnectionId() => Context.ConnectionId;
     
         public async Task BroadcastToConnection(string data, string connectionId)    
@@ -63,7 +63,7 @@ namespace SignalRChatServer.Hubs
                 { "prod_name", prod.Title! },
                 { "contact_id", sellerId! },
                 { "not_read_message", "0" },
-                { "thumbnail", prod.ProductImages?[0] ?? "" }
+                { "thumbnail", prod.ProductImages?.FirstOrDefault() ?? ""}               
             };
 
             string contactForSender = JsonSerializer.Serialize(data);
@@ -89,7 +89,7 @@ namespace SignalRChatServer.Hubs
                     { "prod_name", prod.Title! },
                     { "contact_id", buyer.HashedId! },
                     { "not_read_message", "0" },
-                    { "thumbnail", prod.ProductImages?[0] ?? "" }
+                    { "thumbnail", prod.ProductImages?.FirstOrDefault() ?? "" }
                 };
                 
                 List<Dictionary<string, string>> data = new(2)
@@ -199,16 +199,15 @@ namespace SignalRChatServer.Hubs
                     Console.WriteLine("Invalid");                    
                     break;
             } 
+
             
- 
         }
 
         private async Task PrivateSendMessage(string jsonMessage)
         {
-            Console.WriteLine("MANDANDO MESSAGGIO");
 
             UserMessage message = new();
-            message.fromJson(jsonMessage);
+            message.FromJson(jsonMessage);
         
             Console.WriteLine($"Chat id: {message.ChatId}");
             ChatList? doesChatExist = null;
@@ -246,7 +245,7 @@ namespace SignalRChatServer.Hubs
                     ChatList chat = new ((Guid) prod.Id!, message.SenderId!, prod.Author!);
                     message.ChatId = chat.Id;
                     //json message that has to be sent to the client
-                    string appNotificationData = PrepareMessage(senderId!, message.toAppMessage(prod.Author!));
+                    string appNotificationData = PrepareMessage(senderId!, message.ToAppMessage(prod.Author!));
 
                     //check if receiver client is online or offline 
                     string pingCode = await Ping(receiverId!);
@@ -275,7 +274,7 @@ namespace SignalRChatServer.Hubs
                         //pinged online
                         UserConnection? receiver = _context.ChatServerConnection.SingleOrDefault(user => user.UserId == receiverId);
                         if(receiver is not null){
-                            string appNotificationData = PrepareMessage(senderId!, message.toAppMessage(receiver.UserId!));
+                            string appNotificationData = PrepareMessage(senderId!, message.ToAppMessage(receiver.UserId!));
                             Console.WriteLine(appNotificationData);
                             await SendMessageToOnlineUser(appNotificationData, message, receiver!.ConnectionId!);
                             Console.WriteLine("Message mandato");
@@ -317,14 +316,14 @@ namespace SignalRChatServer.Hubs
        public async Task SendImageToClient(string password, string receiver, string jsonData)
         {
             if (BCrypt.Net.BCrypt.Verify(password, _configuration.GetValue<string>("WebApiServerPassword"))){
-              List<UserMessage> messages = JsonSerializer.Deserialize<List<UserMessage>>(jsonData)!;
-              foreach(UserMessage m in messages){
-                m.Id = Guid.NewGuid();
-                await PrivateSendMessage(m.ObjectToAppMessage(m, receiver));
-              }
-              Console.WriteLine("messaggi mandati");
+                List<UserMessage> messages = JsonSerializer.Deserialize<List<UserMessage>>(jsonData)!;
+                foreach(UserMessage m in messages){
+                    m.Id = Guid.NewGuid();
+                    await PrivateSendMessage(m.ObjectToAppMessage(m, receiver));
+                }
+                Console.WriteLine("messaggi mandati");
             }else{
-              Console.WriteLine("password not correct");
+                Console.WriteLine("password not correct");
             }
             return;
         }
