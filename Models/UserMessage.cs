@@ -13,24 +13,21 @@ public class UserMessage{
     public UserMessage(){}
 
 
-    public UserMessage fromJson(string json){
+    public UserMessage FromJson(string json){
         try{
-            Guid? chat_id;
             Console.WriteLine(json);
             JObject message = JObject.Parse(json);
-            if(message["chatId"] is null || message["chatId"]!.ToString() == "" || message["chatId"]!.ToString() == "null"){
+            if(message["chat_id"] is null || message["chat_id"]!.ToString() == "" || message["chat_id"]!.ToString() == "null"){
                 Id = Guid.NewGuid();
+                ChatId = null;
             }else{
-                Console.WriteLine(message["chatId"]!.ToString());
-                chat_id = Guid.Parse(message["chatId"]!.ToString());
-                if(chat_id != null){
-                    ChatId = chat_id;
-                } 
+                ChatId = Guid.Parse(message["chat_id"]!.ToString());
             }
-            ProdId = Guid.Parse(message["prodId"]!.ToString());
+
+            ProdId = Guid.Parse(message["prod_id"]!.ToString());
             SenderId = message["from"]!.ToString();
             Message = message["message"]!.ToString();
-            SentAt = ulong.Parse(message["sentAt"]!.ToString());
+            SentAt = ulong.Parse(message["sent_at"]!.ToString());
             Delivered = false;
             return this;
         }catch (Exception e)
@@ -41,7 +38,7 @@ public class UserMessage{
 
     }
 
-    public string toAppMessage(string receiverId){
+    public string ToAppMessage(string receiverId){
         string begin = "{";
         string end = "}";
         string json = $""" "chat_id" : "{ChatId}", "prod_id" : "{ProdId}", "sender_id" : "{SenderId}", "receiver_id" : "{receiverId}", "message" : "{Message}", "sent_at" : "{SentAt}" """;
@@ -52,7 +49,7 @@ public class UserMessage{
     public string ObjectToAppMessage(UserMessage m, string receiver){
         string begin = "{";
         string end = "}";
-        string json = $""" "id":"{m.Id}", "chatId" : "{m.ChatId}", "prodId" : "{m.ProdId}", "from" : "{m.SenderId}", "to" : "{receiver}", "message" : "{Message}", "sentAt" : "{SentAt}" """;
+        string json = $""" "id":"{m.Id}", "chat_id" : "{m.ChatId}", "prod_id" : "{m.ProdId}", "from" : "{m.SenderId}", "to" : "{receiver}", "message" : "{Message}", "sent_at" : "{SentAt}" """;
         json = begin + json.Substring(1, json.Length-1) + end;
         return json;
     }
