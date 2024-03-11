@@ -16,11 +16,6 @@ builder.Services.AddDbContext<ChatDbContext>(options =>
 
 //import rsa key for jwt validation
 string filename = "key";
-using (RSA rsa = RSA.Create())
-{
-    byte[] privateKeyBytes = rsa.ExportRSAPrivateKey();
-    File.WriteAllBytes(filename, privateKeyBytes);
-}
 RSA rsaKey = RSA.Create();
 rsaKey.ImportRSAPrivateKey(File.ReadAllBytes(filename), out _);
 
